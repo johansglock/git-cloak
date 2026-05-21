@@ -1,0 +1,15 @@
+# Build artifacts
+/.e2e/
+/bin/
+/dist/
+git-cloak
+git-remote-cloak
+*.test
+*.out
+
+# Local scratch
+/tmp/
+*.key
+
+# Editor
+.DS_Store
