@@ -1,9 +1,9 @@
-# Build artifacts
+# Build artifacts (anchored to repo root so they don't match cmd/git-cloak etc.)
 /.e2e/
 /bin/
 /dist/
-git-cloak
-git-remote-cloak
+/git-cloak
+/git-remote-cloak
 *.test
 *.out
 
