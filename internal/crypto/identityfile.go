@@ -47,6 +47,14 @@ const (
 	argonMemoryKiB = 64 * 1024 // 64 MiB
 	argonThreads   = 4
 	argonSaltLen   = 16
+
+	// Bounds on the KDF parameters accepted from a file header. We always write
+	// the fixed values above; these caps simply prevent a hostile/corrupt file
+	// from forcing a giant allocation or an unbounded work factor (DoS).
+	argonMaxTime    = 16
+	argonMinMemKiB  = 8 * 1024   // 8 MiB
+	argonMaxMemKiB  = 256 * 1024 // 256 MiB
+	argonMaxThreads = 16
 )
 
 // ErrIdentityDecrypt is returned when an encrypted identity file cannot be
@@ -100,6 +108,12 @@ func openArgon2(magic string, blob, passphrase []byte) ([]byte, bool) {
 	off += 4
 	threads := blob[off]
 	off++
+	// The KDF parameters come from the (untrusted) file header. Reject anything
+	// outside a sane band before calling argon2.IDKey, so a malicious or corrupt
+	// file cannot trigger an enormous allocation or an unbounded work factor.
+	if t < 1 || t > argonMaxTime || mem < argonMinMemKiB || mem > argonMaxMemKiB || threads < 1 || threads > argonMaxThreads {
+		return nil, false
+	}
 	salt := blob[off : off+argonSaltLen]
 	off += argonSaltLen
 	nonce := blob[off : off+chacha20poly1305.NonceSizeX]

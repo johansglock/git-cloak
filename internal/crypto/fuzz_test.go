@@ -54,6 +54,14 @@ func FuzzOpenPassphrase(f *testing.F) {
 	f.Add(sealed)
 	f.Add([]byte("CLOAKPW1short"))
 	f.Add([]byte{})
+	// A header with an absurd Argon2 memory parameter must be rejected by the
+	// bounds check, not fed to argon2.IDKey (would OOM/hang the fuzzer).
+	huge := make([]byte, len("CLOAKPW1")+9+argonSaltLen+24+TagLen)
+	copy(huge, "CLOAKPW1")
+	huge[8], huge[9], huge[10], huge[11] = 0, 0, 0, 1 // time = 1
+	huge[12], huge[13], huge[14], huge[15] = 0xFF, 0xFF, 0xFF, 0xFF
+	huge[16] = 1
+	f.Add(huge)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		_, _ = OpenPassphrase(data, []byte("pw")) // must not panic

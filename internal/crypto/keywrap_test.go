@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"encoding/binary"
 	"testing"
 )
 
@@ -61,6 +62,22 @@ func TestPublicKeyStringRoundTrip(t *testing.T) {
 	}
 	if _, err := ParsePublicKey("nope"); err == nil {
 		t.Fatal("expected parse error for bad prefix")
+	}
+}
+
+// TestOpenPassphraseRejectsHugeKDFParams guards against a malicious or corrupt
+// keyfile forcing an enormous Argon2 allocation: the parameters come from the
+// untrusted header and must be bounded before argon2.IDKey runs (regression for
+// a fuzzer-discovered OOM).
+func TestOpenPassphraseRejectsHugeKDFParams(t *testing.T) {
+	const nonceLen = 24
+	blob := make([]byte, len("CLOAKPW1")+9+argonSaltLen+nonceLen+TagLen)
+	copy(blob, "CLOAKPW1")
+	binary.BigEndian.PutUint32(blob[8:12], 1)           // time: fine
+	binary.BigEndian.PutUint32(blob[12:16], 0xFFFFFFFF) // memory: absurd
+	blob[16] = 1                                        // threads: fine
+	if _, err := OpenPassphrase(blob, []byte("x")); err == nil {
+		t.Fatal("expected rejection of absurd argon2 memory parameter")
 	}
 }
 
